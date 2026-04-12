@@ -1,0 +1,35 @@
+// Anthropic / Claude — sing-box Rule Set
+// https://github.com/xiaolai/anthropic-claude-surge-rules-set
+// Generated: 2026-04-12
+{
+  "version": 2,
+  "rules": [
+    {
+      "domain": [
+        "downloads.claude.ai",
+        "storage.googleapis.com",
+        "cdn.growthbook.io",
+        "cdn.usefathom.com"
+      ],
+      "domain_suffix": [
+        "anthropic.com",
+        "claude.ai",
+        "claude.com",
+        "claudeusercontent.com",
+        "clau.de",
+        "modelcontextprotocol.io",
+        "intercom.io",
+        "intercomcdn.com",
+        "intercomassets.com",
+        "intercomusercontent.com",
+        "sentry.io",
+        "datadoghq.com"
+      ],
+      "ip_cidr": [
+        "160.79.104.0/23",
+        "160.79.104.0/21",
+        "2607:6bc0::/48"
+      ]
+    }
+  ]
+}

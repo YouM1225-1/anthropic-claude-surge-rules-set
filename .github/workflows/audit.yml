@@ -1,0 +1,190 @@
+name: Daily Ruleset Audit
+
+on:
+  schedule:
+    - cron: '0 8 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+  id-token: write
+
+jobs:
+  # ------------------------------------------------------------------
+  # Stage 1: Capture DNS + scan binary (mechanical, no LLM)
+  # ------------------------------------------------------------------
+  capture:
+    runs-on: ubuntu-latest
+    outputs:
+      has_candidates: ${{ steps.analyze.outputs.has_candidates }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Claude Code
+        run: |
+          curl -fsSL https://claude.ai/install.sh | bash || true
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Exercise Claude & capture DNS
+        run: |
+          sudo bash scripts/exercise-and-capture.sh captured-domains.txt
+
+      - name: Diff against current ruleset
+        id: analyze
+        run: |
+          # Extract domains already in ruleset
+          python3 -c "
+          import yaml
+          with open('domains.yaml') as f:
+              data = yaml.safe_load(f)
+          for g in data['groups']:
+              for e in g['entries']:
+                  print(e['domain'])
+          " > existing-domains.txt
+
+          # Find domains in capture that aren't covered
+          > candidates.txt
+          while IFS= read -r domain; do
+            covered=false
+            while IFS= read -r existing; do
+              if echo "$domain" | grep -q "$existing"; then
+                covered=true
+                break
+              fi
+            done < existing-domains.txt
+            if [ "$covered" = "false" ]; then
+              echo "$domain" >> candidates.txt
+            fi
+          done < captured-domains.txt
+
+          COUNT=$(wc -l < candidates.txt | tr -d ' ')
+          echo "Uncovered domains: $COUNT"
+          cat candidates.txt
+
+          if [ "$COUNT" -gt 0 ]; then
+            echo "has_candidates=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_candidates=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Upload candidates
+        if: steps.analyze.outputs.has_candidates == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: candidates
+          path: candidates.txt
+
+  # ------------------------------------------------------------------
+  # Stage 2: LLM analysis via claude-code-action
+  # ------------------------------------------------------------------
+  analyze:
+    needs: capture
+    if: needs.capture.outputs.has_candidates == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download candidates
+        uses: actions/download-artifact@v4
+        with:
+          name: candidates
+
+      - name: Claude Code — analyze and update
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          show_full_output: true
+          additional_permissions: "Edit,Write,Bash"
+          claude_args: "--permission-mode bypassPermissions"
+          prompt: |
+            You are maintaining a proxy ruleset for Anthropic/Claude services.
+            The file `domains.yaml` is the source of truth. The file `candidates.txt`
+            contains domains discovered in the Claude CLI binary that are NOT yet
+            in the ruleset.
+
+            For each domain in candidates.txt:
+            1. Determine if it's related to Anthropic/Claude services
+            2. If yes: add it to the correct group in domains.yaml with proper
+               documentation (reason, source, added date as today)
+            3. If no: skip it (generic CDN, bundled runtime dependency, etc.)
+
+            After updating domains.yaml, run: python3 scripts/generate.py
+            to regenerate all output formats in dist/.
+
+            Then commit all changes with a clear message listing what was added/skipped.
+
+            Be conservative: only add domains that are clearly Claude/Anthropic-related
+            or that Claude specifically depends on.
+
+      - name: Push if changed
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Restore git auth (claude-code-action may have overwritten it)
+          git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/xiaolai/anthropic-claude-surge-rules-set.git"
+
+          if [[ -n "$(git diff --name-only)" ]]; then
+            git add -A
+            git commit -m "chore: auto-update ruleset — $(date +%Y-%m-%d)"
+          fi
+          UNPUSHED=$(git log origin/main..HEAD --oneline 2>/dev/null | wc -l | tr -d ' ')
+          if [[ "$UNPUSHED" -gt 0 ]]; then
+            echo "$UNPUSHED unpushed commit(s), pushing..."
+            git push
+          else
+            echo "No changes to push."
+          fi
+
+  # ------------------------------------------------------------------
+  # Stage 3: Post audit summary as issue
+  # ------------------------------------------------------------------
+  report:
+    needs: [capture, analyze]
+    if: always() && needs.capture.outputs.has_candidates == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main  # Get latest (possibly updated) code
+
+      - name: Download candidates
+        uses: actions/download-artifact@v4
+        with:
+          name: candidates
+
+      - name: Post issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const candidates = fs.readFileSync('candidates.txt', 'utf8').trim().split('\n').filter(Boolean);
+
+            // Check git log for what was actually added
+            const { execSync } = require('child_process');
+            let commitMsg = '';
+            try {
+              commitMsg = execSync('git log -1 --pretty=%B').toString();
+            } catch {}
+
+            const body = `## Daily Ruleset Audit — ${new Date().toISOString().split('T')[0]}
+
+            ### Domains discovered (${candidates.length})
+            ${candidates.map(d => `- \`${d}\``).join('\n')}
+
+            ### Action taken
+            ${commitMsg.includes('auto-update') ?
+              'Claude Code analyzed and updated the ruleset automatically. See latest commit for details.' :
+              'No changes were made (all candidates were either already covered or deemed unrelated).'}
+
+            ---
+            *Automated: DNS capture → binary analysis → LLM classification → commit*`;
+
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `Audit: ${candidates.length} domain(s) reviewed — ${new Date().toISOString().split('T')[0]}`,
+              body: body,
+              labels: ['automated', 'audit']
+            });

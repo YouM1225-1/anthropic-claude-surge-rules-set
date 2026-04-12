@@ -1,0 +1,19 @@
+# Anthropic / Claude domains
+# https://github.com/xiaolai/anthropic-claude-surge-rules-set
+# Generated: 2026-04-12
+anthropic.com
+claude.ai
+claude.com
+claudeusercontent.com
+clau.de
+modelcontextprotocol.io
+downloads.claude.ai
+storage.googleapis.com
+cdn.growthbook.io
+intercom.io
+intercomcdn.com
+intercomassets.com
+intercomusercontent.com
+cdn.usefathom.com
+sentry.io
+datadoghq.com

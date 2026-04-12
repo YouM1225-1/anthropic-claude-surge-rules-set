@@ -1,0 +1,176 @@
+# ============================================================
+# Anthropic / Claude — Domain & IP Registry
+# Single source of truth. All output formats generated from this file.
+# ============================================================
+# Last updated: 2026-04-12
+#
+# Each entry documents:
+#   domain:  the domain or CIDR
+#   type:    DOMAIN | DOMAIN-SUFFIX | DOMAIN-KEYWORD | IP-CIDR | IP-CIDR6
+#   reason:  why this is needed (for auditing and transparency)
+#   source:  how this was discovered
+#   added:   date first added
+
+groups:
+
+  # ------------------------------------------------------------------
+  # 1. Core Anthropic Infrastructure
+  # ------------------------------------------------------------------
+  - name: Core API & Services
+    entries:
+      - domain: anthropic.com
+        type: DOMAIN-SUFFIX
+        reason: >
+          All Anthropic services — api.anthropic.com (API endpoint),
+          console.anthropic.com (dashboard), statsig.anthropic.com (feature flags),
+          status.anthropic.com (status page), sentry.anthropic.com (error reporting),
+          mcp-proxy.anthropic.com (MCP connector proxy), support.anthropic.com
+        source: DNS records, binary analysis, network monitoring
+        added: 2026-04-06
+
+  # ------------------------------------------------------------------
+  # 2. Claude Products
+  # ------------------------------------------------------------------
+  - name: Claude Web & CLI
+    entries:
+      - domain: claude.ai
+        type: DOMAIN-SUFFIX
+        reason: >
+          Claude web app, downloads.claude.ai (CLI binary distribution),
+          beacon.claude-ai.* (telemetry)
+        source: Official product URLs
+        added: 2026-04-06
+
+      - domain: claude.com
+        type: DOMAIN-SUFFIX
+        reason: >
+          platform.claude.com (OAuth, billing), code.claude.com (CLI docs),
+          docs.claude.com, support.claude.com
+        source: Official product URLs
+        added: 2026-04-06
+
+      - domain: claudeusercontent.com
+        type: DOMAIN-SUFFIX
+        reason: Rendered artifacts, file previews, user uploads in Claude web app
+        source: Network monitoring of claude.ai
+        added: 2026-04-06
+
+      - domain: clau.de
+        type: DOMAIN-SUFFIX
+        reason: Anthropic short URL redirector used in Claude Code CLI output
+        source: Claude CLI binary string analysis
+        added: 2026-04-12
+
+  # ------------------------------------------------------------------
+  # 3. Protocol & Ecosystem
+  # ------------------------------------------------------------------
+  - name: MCP & Ecosystem
+    entries:
+      - domain: modelcontextprotocol.io
+        type: DOMAIN-SUFFIX
+        reason: Official Model Context Protocol specification site
+        source: Official Anthropic documentation
+        added: 2026-04-06
+
+  # ------------------------------------------------------------------
+  # 4. Binary Distribution
+  # ------------------------------------------------------------------
+  - name: Updates & Distribution
+    entries:
+      - domain: downloads.claude.ai
+        type: DOMAIN
+        reason: Claude Code CLI binary distribution, plugin marketplace
+        source: Install script analysis
+        added: 2026-04-06
+
+      - domain: storage.googleapis.com
+        type: DOMAIN
+        reason: >
+          Google Cloud Storage bucket hosting Claude Code native binaries.
+          Used by the CLI installer and auto-updater.
+          NOTE: shared Google domain — only specific buckets are Claude-related,
+          but proxy rules cannot filter by URL path.
+        source: Install script (claude.ai/install.sh) — GCS bucket URL
+        added: 2026-04-06
+
+  # ------------------------------------------------------------------
+  # 5. Feature Flags & Telemetry
+  # ------------------------------------------------------------------
+  - name: Feature Flags & Telemetry
+    entries:
+      - domain: cdn.growthbook.io
+        type: DOMAIN
+        reason: GrowthBook feature flag service used by Claude Code CLI
+        source: Claude CLI binary string analysis, active connection monitoring
+        added: 2026-04-12
+
+  # ------------------------------------------------------------------
+  # 6. Anthropic IP Ranges
+  # ------------------------------------------------------------------
+  - name: Anthropic IP Ranges (AS399358)
+    entries:
+      - domain: 160.79.104.0/23
+        type: IP-CIDR
+        reason: Anthropic inbound IPv4 — where API services listen
+        source: Official Anthropic network documentation
+        added: 2026-04-06
+
+      - domain: 160.79.104.0/21
+        type: IP-CIDR
+        reason: Anthropic outbound IPv4 — MCP server calls, webhooks, GHES
+        source: Official Anthropic network documentation
+        added: 2026-04-06
+
+      - domain: 2607:6bc0::/48
+        type: IP-CIDR6
+        reason: Anthropic inbound IPv6
+        source: Official Anthropic network documentation
+        added: 2026-04-06
+
+  # ------------------------------------------------------------------
+  # 7. Third-Party Services (embedded in Claude products)
+  # ------------------------------------------------------------------
+  - name: Third-Party Dependencies
+    reason_prefix: Loaded inside Claude web app or CLI. Blocking causes degraded UX.
+    entries:
+      - domain: intercom.io
+        type: DOMAIN-SUFFIX
+        reason: In-app support chat widget on claude.ai
+        source: Network monitoring of claude.ai
+        added: 2026-04-06
+
+      - domain: intercomcdn.com
+        type: DOMAIN-SUFFIX
+        reason: Intercom CDN assets
+        source: Network monitoring
+        added: 2026-04-06
+
+      - domain: intercomassets.com
+        type: DOMAIN-SUFFIX
+        reason: Intercom static assets
+        source: Network monitoring
+        added: 2026-04-06
+
+      - domain: intercomusercontent.com
+        type: DOMAIN-SUFFIX
+        reason: Intercom user content
+        source: Network monitoring
+        added: 2026-04-06
+
+      - domain: cdn.usefathom.com
+        type: DOMAIN
+        reason: Fathom privacy-focused analytics on claude.ai
+        source: Network monitoring
+        added: 2026-04-06
+
+      - domain: sentry.io
+        type: DOMAIN-SUFFIX
+        reason: Error reporting used by Claude Code CLI client
+        source: Binary string analysis
+        added: 2026-04-06
+
+      - domain: datadoghq.com
+        type: DOMAIN-SUFFIX
+        reason: Datadog telemetry & logging used by Claude Code CLI
+        source: Binary string analysis, active connection monitoring (http-intake.logs.us5.datadoghq.com)
+        added: 2026-04-12

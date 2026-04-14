@@ -1,7 +1,7 @@
 # ============================================================
 # ANTHROPIC / CLAUDE — COMPREHENSIVE PROXY RULESET
 # https://github.com/xiaolai/anthropic-claude-surge-rules-set
-# Generated: 2026-04-12
+# Generated: 2026-04-14
 # Format: Surge / Surfboard
 # ============================================================
 
@@ -30,11 +30,5 @@ IP-CIDR,160.79.104.0/21,no-resolve
 IP-CIDR6,2607:6bc0::/48,no-resolve
 
 # Third-Party Dependencies
-DOMAIN-SUFFIX,intercom.io
-DOMAIN-SUFFIX,intercomcdn.com
-DOMAIN-SUFFIX,intercomassets.com
-DOMAIN-SUFFIX,intercomusercontent.com
 DOMAIN,cdn.usefathom.com
-DOMAIN-SUFFIX,sentry.io
-DOMAIN-SUFFIX,datadoghq.com
 

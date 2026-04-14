@@ -130,47 +130,16 @@ groups:
   # ------------------------------------------------------------------
   # 7. Third-Party Services (embedded in Claude products)
   # ------------------------------------------------------------------
+  # NOTE: Only Claude-specific endpoints. Broad DOMAIN-SUFFIX rules for
+  # shared infrastructure (sentry.io, datadoghq.com, intercom.io) were
+  # removed — they hijack ALL traffic to those services, not just Claude's.
+  # If Claude's support widget or telemetry degrades, add narrow DOMAIN
+  # rules for the specific subdomains Claude uses.
   - name: Third-Party Dependencies
     reason_prefix: Loaded inside Claude web app or CLI. Blocking causes degraded UX.
     entries:
-      - domain: intercom.io
-        type: DOMAIN-SUFFIX
-        reason: In-app support chat widget on claude.ai
-        source: Network monitoring of claude.ai
-        added: 2026-04-06
-
-      - domain: intercomcdn.com
-        type: DOMAIN-SUFFIX
-        reason: Intercom CDN assets
-        source: Network monitoring
-        added: 2026-04-06
-
-      - domain: intercomassets.com
-        type: DOMAIN-SUFFIX
-        reason: Intercom static assets
-        source: Network monitoring
-        added: 2026-04-06
-
-      - domain: intercomusercontent.com
-        type: DOMAIN-SUFFIX
-        reason: Intercom user content
-        source: Network monitoring
-        added: 2026-04-06
-
       - domain: cdn.usefathom.com
         type: DOMAIN
         reason: Fathom privacy-focused analytics on claude.ai
         source: Network monitoring
         added: 2026-04-06
-
-      - domain: sentry.io
-        type: DOMAIN-SUFFIX
-        reason: Error reporting used by Claude Code CLI client
-        source: Binary string analysis
-        added: 2026-04-06
-
-      - domain: datadoghq.com
-        type: DOMAIN-SUFFIX
-        reason: Datadog telemetry & logging used by Claude Code CLI
-        source: Binary string analysis, active connection monitoring (http-intake.logs.us5.datadoghq.com)
-        added: 2026-04-12

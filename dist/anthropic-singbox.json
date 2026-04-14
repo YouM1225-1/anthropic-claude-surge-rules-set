@@ -1,6 +1,6 @@
 // Anthropic / Claude — sing-box Rule Set
 // https://github.com/xiaolai/anthropic-claude-surge-rules-set
-// Generated: 2026-04-12
+// Generated: 2026-04-14
 {
   "version": 2,
   "rules": [
@@ -17,13 +17,7 @@
         "claude.com",
         "claudeusercontent.com",
         "clau.de",
-        "modelcontextprotocol.io",
-        "intercom.io",
-        "intercomcdn.com",
-        "intercomassets.com",
-        "intercomusercontent.com",
-        "sentry.io",
-        "datadoghq.com"
+        "modelcontextprotocol.io"
       ],
       "ip_cidr": [
         "160.79.104.0/23",

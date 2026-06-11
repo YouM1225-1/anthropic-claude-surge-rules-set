@@ -86,7 +86,9 @@ jobs:
           /tmp/sing-box/sing-box version
 
       - name: Generate rule sets
-        run: python scripts/generate.py
+        run: |
+          export GENERATED_DATE="$(git log -1 --format=%cs -- domains.yaml supplemental-domains.yaml)"
+          python scripts/generate.py
 
       - name: Verify generated outputs
         run: |

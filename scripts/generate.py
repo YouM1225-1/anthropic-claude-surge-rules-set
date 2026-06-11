@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Generate proxy ruleset files in multiple formats from domains.yaml and
+Generate proxy rule-set files in multiple formats from domains.yaml and
 supplemental-domains.yaml.
 
 Outputs:
@@ -28,6 +28,10 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 DOMAINS_YAML = REPO_ROOT / "domains.yaml"
 SUPPLEMENTAL_DOMAINS_YAML = REPO_ROOT / "supplemental-domains.yaml"
 DIST = REPO_ROOT / "dist"
+
+
+def generated_date():
+    return os.environ.get("GENERATED_DATE") or datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
 
 def load_domains():
@@ -68,7 +72,7 @@ def generate_surge(groups):
         "# ============================================================",
         "# ANTHROPIC / CLAUDE — COMPREHENSIVE PROXY RULESET",
         "# https://github.com/xiaolai/anthropic-claude-surge-rules-set",
-        f"# Generated: {datetime.now(timezone.utc).strftime('%Y-%m-%d')}",
+        f"# Generated: {generated_date()}",
         "# Format: Surge / Surfboard",
         "# ============================================================",
         "",
@@ -103,7 +107,7 @@ def generate_clash(groups):
     header = (
         f"# Anthropic / Claude — Clash Rule Provider\n"
         f"# https://github.com/xiaolai/anthropic-claude-surge-rules-set\n"
-        f"# Generated: {datetime.now(timezone.utc).strftime('%Y-%m-%d')}\n"
+        f"# Generated: {generated_date()}\n"
     )
     data = {"payload": payload}
     return header + yaml.dump(data, default_flow_style=False, allow_unicode=True)
@@ -116,7 +120,7 @@ def generate_singbox(groups):
     header = (
         f"// Anthropic / Claude — sing-box Rule Set\n"
         f"// https://github.com/xiaolai/anthropic-claude-surge-rules-set\n"
-        f"// Generated: {datetime.now(timezone.utc).strftime('%Y-%m-%d')}\n"
+        f"// Generated: {generated_date()}\n"
     )
     return header + json.dumps(rules, indent=2)
 
@@ -179,7 +183,7 @@ def generate_quantumultx(groups):
     lines = [
         f"# Anthropic / Claude — Quantumult X Filter",
         f"# https://github.com/xiaolai/anthropic-claude-surge-rules-set",
-        f"# Generated: {datetime.now(timezone.utc).strftime('%Y-%m-%d')}",
+        f"# Generated: {generated_date()}",
         "",
     ]
     for group in groups:
@@ -201,7 +205,7 @@ def generate_loon(groups):
     lines = [
         f"# Anthropic / Claude — Loon Rule",
         f"# https://github.com/xiaolai/anthropic-claude-surge-rules-set",
-        f"# Generated: {datetime.now(timezone.utc).strftime('%Y-%m-%d')}",
+        f"# Generated: {generated_date()}",
         "",
     ]
     for group in groups:
@@ -221,7 +225,7 @@ def generate_plain(groups):
     lines = [
         f"# Anthropic / Claude domains",
         f"# https://github.com/xiaolai/anthropic-claude-surge-rules-set",
-        f"# Generated: {datetime.now(timezone.utc).strftime('%Y-%m-%d')}",
+        f"# Generated: {generated_date()}",
     ]
     for group in groups:
         for entry in group["entries"]:

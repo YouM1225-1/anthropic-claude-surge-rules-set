@@ -1,6 +1,6 @@
 # Anthropic / Claude — Clash Rule Provider
 # https://github.com/xiaolai/anthropic-claude-surge-rules-set
-# Generated: 2026-04-14
+# Generated: 2026-06-11
 payload:
 - +.anthropic.com
 - +.claude.ai
@@ -15,4 +15,5 @@ payload:
 - 160.79.104.0/21
 - 2607:6bc0::/48
 - cdn.usefathom.com
+- challenges.cloudflare.com
 

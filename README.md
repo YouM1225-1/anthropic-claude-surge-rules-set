@@ -9,7 +9,7 @@ Supports **Surge**, **Clash/Mihomo**, **sing-box**, **Quantumult X**, **Loon**, 
 ### Surge / Surfboard
 
 ```ini
-RULE-SET,https://raw.githubusercontent.com/xiaolai/anthropic-claude-surge-rules-set/main/dist/anthropic.list,YourProxyGroup
+RULE-SET,https://raw.githubusercontent.com/YouM1225-1/anthropic-claude-surge-rules-set/main/dist/anthropic.list,YourProxyGroup
 ```
 
 ### Clash / Mihomo
@@ -19,7 +19,7 @@ rule-providers:
   anthropic:
     type: http
     behavior: classical
-    url: https://raw.githubusercontent.com/xiaolai/anthropic-claude-surge-rules-set/main/dist/anthropic-clash.yaml
+    url: https://raw.githubusercontent.com/YouM1225-1/anthropic-claude-surge-rules-set/main/dist/anthropic-clash.yaml
     interval: 86400
 
 rules:
@@ -28,6 +28,8 @@ rules:
 
 ### sing-box
 
+Source rule-set:
+
 ```json
 {
   "route": {
@@ -35,8 +37,28 @@ rules:
       {
         "tag": "anthropic",
         "type": "remote",
-        "url": "https://raw.githubusercontent.com/xiaolai/anthropic-claude-surge-rules-set/main/dist/anthropic-singbox.json",
+        "url": "https://raw.githubusercontent.com/YouM1225-1/anthropic-claude-surge-rules-set/main/dist/anthropic-singbox.json",
         "format": "source"
+      }
+    ],
+    "rules": [
+      { "rule_set": "anthropic", "outbound": "proxy" }
+    ]
+  }
+}
+```
+
+Binary rule-set (`.srs`):
+
+```json
+{
+  "route": {
+    "rule_set": [
+      {
+        "tag": "anthropic",
+        "type": "remote",
+        "url": "https://raw.githubusercontent.com/YouM1225-1/anthropic-claude-surge-rules-set/main/dist/anthropic-singbox.srs",
+        "format": "binary"
       }
     ],
     "rules": [
@@ -50,14 +72,14 @@ rules:
 
 ```ini
 [filter_remote]
-https://raw.githubusercontent.com/xiaolai/anthropic-claude-surge-rules-set/main/dist/anthropic-qx.conf, tag=Anthropic, force-policy=proxy, update-interval=86400
+https://raw.githubusercontent.com/YouM1225-1/anthropic-claude-surge-rules-set/main/dist/anthropic-qx.conf, tag=Anthropic, force-policy=proxy, update-interval=86400
 ```
 
 ### Loon
 
 ```ini
 [Remote Rule]
-https://raw.githubusercontent.com/xiaolai/anthropic-claude-surge-rules-set/main/dist/anthropic-loon.conf, policy=proxy, tag=Anthropic
+https://raw.githubusercontent.com/YouM1225-1/anthropic-claude-surge-rules-set/main/dist/anthropic-loon.conf, policy=proxy, tag=Anthropic
 ```
 
 ## What's Covered
@@ -71,6 +93,7 @@ https://raw.githubusercontent.com/xiaolai/anthropic-claude-surge-rules-set/main/
 | **MCP** | `*.modelcontextprotocol.io` | MCP spec site |
 | **CLI Updates** | `downloads.claude.ai`, `storage.googleapis.com` | Binary distribution |
 | **Feature Flags** | `cdn.growthbook.io` | A/B testing, rollout gates |
+| **Cloudflare Challenge** | `challenges.cloudflare.com` | Login and bot-check challenge resources |
 | **IP Ranges** | `160.79.104.0/21`, `2607:6bc0::/48` | Anthropic AS399358 |
 | **Support** | `*.intercom.io`, `*.intercomcdn.com` | In-app chat widget |
 | **Analytics** | `cdn.usefathom.com` | Privacy-focused analytics |
@@ -79,13 +102,26 @@ https://raw.githubusercontent.com/xiaolai/anthropic-claude-surge-rules-set/main/
 
 ## Source of Truth
 
-All domains are defined in [`domains.yaml`](domains.yaml) with documented reasons and discovery sources. Output files are generated from it:
+Base domains are defined in upstream [`domains.yaml`](domains.yaml). Local additions live in [`supplemental-domains.yaml`](supplemental-domains.yaml), so scheduled upstream syncs can merge cleanly while preserving extra rules.
+
+Output files are generated from both files:
 
 ```bash
 python3 scripts/generate.py
 ```
 
-This produces all formats in `dist/`.
+This produces all text/source formats in `dist/`. If `sing-box` is available in `PATH`, it also compiles `dist/anthropic-singbox.srs`.
+
+## Automation
+
+This fork includes a GitHub Actions workflow that:
+
+1. Merges `xiaolai/anthropic-claude-surge-rules-set` `main`
+2. Applies [`supplemental-domains.yaml`](supplemental-domains.yaml)
+3. Builds all `dist/` outputs, including `dist/anthropic-singbox.srs`
+4. Commits generated changes back to this fork
+
+It runs daily and can also be triggered manually from the Actions tab.
 
 ## Discovery Method
 

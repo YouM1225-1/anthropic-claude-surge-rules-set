@@ -1,18 +1,24 @@
 #!/usr/bin/env python3
 """
-Generate proxy ruleset files in multiple formats from domains.yaml.
+Generate proxy ruleset files in multiple formats from domains.yaml and
+supplemental-domains.yaml.
 
 Outputs:
   dist/anthropic.list          — Surge / Surfboard
   dist/anthropic-clash.yaml    — Clash / Mihomo
   dist/anthropic-singbox.json  — sing-box
+  dist/anthropic-singbox.srs   — sing-box binary rule-set, when sing-box is installed
   dist/anthropic-qx.conf       — Quantumult X
   dist/anthropic-loon.conf     — Loon
   dist/anthropic-domains.txt   — Plain domain list (one per line)
 """
 
 import json
+import os
+import shutil
+import subprocess
 import sys
+import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -20,13 +26,40 @@ import yaml
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DOMAINS_YAML = REPO_ROOT / "domains.yaml"
+SUPPLEMENTAL_DOMAINS_YAML = REPO_ROOT / "supplemental-domains.yaml"
 DIST = REPO_ROOT / "dist"
 
 
 def load_domains():
-    with open(DOMAINS_YAML) as f:
-        data = yaml.safe_load(f)
-    return data["groups"]
+    groups = []
+    for path in (DOMAINS_YAML, SUPPLEMENTAL_DOMAINS_YAML):
+        if not path.exists():
+            continue
+        with open(path) as f:
+            data = yaml.safe_load(f)
+        groups.extend(data["groups"])
+    return dedupe_groups(groups)
+
+
+def dedupe_groups(groups):
+    """Remove duplicate rules while preserving upstream-first ordering."""
+    seen = set()
+    deduped = []
+
+    for group in groups:
+        entries = []
+        for entry in group["entries"]:
+            key = (entry["type"], entry["domain"])
+            if key in seen:
+                continue
+            seen.add(key)
+            entries.append(entry)
+        if entries:
+            copied = dict(group)
+            copied["entries"] = entries
+            deduped.append(copied)
+
+    return deduped
 
 
 def generate_surge(groups):
@@ -78,6 +111,18 @@ def generate_clash(groups):
 
 def generate_singbox(groups):
     """sing-box rule-set JSON format."""
+    rules = build_singbox_rules(groups)
+
+    header = (
+        f"// Anthropic / Claude — sing-box Rule Set\n"
+        f"// https://github.com/xiaolai/anthropic-claude-surge-rules-set\n"
+        f"// Generated: {datetime.now(timezone.utc).strftime('%Y-%m-%d')}\n"
+    )
+    return header + json.dumps(rules, indent=2)
+
+
+def build_singbox_rules(groups):
+    """Build sing-box source rule-set payload."""
     rules = {"version": 2, "rules": []}
     domains, domain_suffixes, ip_cidrs = [], [], []
 
@@ -100,12 +145,33 @@ def generate_singbox(groups):
         rule["ip_cidr"] = ip_cidrs
     rules["rules"].append(rule)
 
-    header = (
-        f"// Anthropic / Claude — sing-box Rule Set\n"
-        f"// https://github.com/xiaolai/anthropic-claude-surge-rules-set\n"
-        f"// Generated: {datetime.now(timezone.utc).strftime('%Y-%m-%d')}\n"
-    )
-    return header + json.dumps(rules, indent=2)
+    return rules
+
+
+def compile_singbox_srs(groups):
+    """Compile sing-box source rule-set to binary SRS when sing-box is available."""
+    sing_box = os.environ.get("SING_BOX") or shutil.which("sing-box")
+    if not sing_box:
+        print("  anthropic-singbox.srs        skipped (sing-box not found)")
+        return
+
+    with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as f:
+        json.dump(build_singbox_rules(groups), f, indent=2)
+        f.write("\n")
+        source_path = f.name
+
+    try:
+        output_path = DIST / "anthropic-singbox.srs"
+        subprocess.run(
+            [sing_box, "rule-set", "compile", "--output", str(output_path), source_path],
+            check=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        print(f"  {'anthropic-singbox.srs':30s} {output_path.stat().st_size:>6,} bytes")
+    finally:
+        Path(source_path).unlink(missing_ok=True)
 
 
 def generate_quantumultx(groups):
@@ -182,6 +248,8 @@ def main():
         path = DIST / filename
         path.write_text(content + "\n")
         print(f"  {filename:30s} {len(content):>6,} bytes")
+
+    compile_singbox_srs(groups)
 
     # Also copy Surge format to repo root for backward compatibility
     (REPO_ROOT / "anthropic.list").write_text(

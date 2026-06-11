@@ -1,7 +1,7 @@
 # ============================================================
 # ANTHROPIC / CLAUDE — COMPREHENSIVE PROXY RULESET
 # https://github.com/xiaolai/anthropic-claude-surge-rules-set
-# Generated: 2026-04-14
+# Generated: 2026-06-11
 # Format: Surge / Surfboard
 # ============================================================
 
@@ -31,4 +31,7 @@ IP-CIDR6,2607:6bc0::/48,no-resolve
 
 # Third-Party Dependencies
 DOMAIN,cdn.usefathom.com
+
+# Cloudflare Challenge
+DOMAIN,challenges.cloudflare.com
 

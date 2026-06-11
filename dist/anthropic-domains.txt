@@ -1,6 +1,6 @@
 # Anthropic / Claude domains
 # https://github.com/xiaolai/anthropic-claude-surge-rules-set
-# Generated: 2026-04-14
+# Generated: 2026-06-11
 anthropic.com
 claude.ai
 claude.com
@@ -11,3 +11,4 @@ downloads.claude.ai
 storage.googleapis.com
 cdn.growthbook.io
 cdn.usefathom.com
+challenges.cloudflare.com

@@ -1,0 +1,121 @@
+name: Sync Upstream And Build Rule Sets
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "25 20 * * *"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-upstream-and-build-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  sync-and-build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout fork
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Merge upstream
+        run: |
+          git remote add upstream https://github.com/xiaolai/anthropic-claude-surge-rules-set.git
+          git fetch upstream main
+          git merge --no-edit upstream/main
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Install Python dependencies
+        run: python -m pip install --upgrade pyyaml
+
+      - name: Install sing-box
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python - <<'PY' > /tmp/sing-box-url
+          import json
+          import os
+          import urllib.request
+
+          request = urllib.request.Request(
+              "https://api.github.com/repos/SagerNet/sing-box/releases/latest",
+              headers={"Accept": "application/vnd.github+json"},
+          )
+          token = os.environ.get("GITHUB_TOKEN")
+          if token:
+              request.add_header("Authorization", f"Bearer {token}")
+
+          with urllib.request.urlopen(request, timeout=30) as response:
+              release = json.load(response)
+
+          assets = release["assets"]
+          names = [
+              lambda name: name.endswith("-linux-amd64.tar.gz"),
+              lambda name: name.endswith("-linux-amd64-glibc.tar.gz"),
+              lambda name: name.endswith("-linux-amd64-musl.tar.gz"),
+          ]
+
+          for matches in names:
+              for asset in assets:
+                  name = asset["name"]
+                  if matches(name):
+                      print(asset["browser_download_url"])
+                      raise SystemExit
+
+          raise SystemExit("No linux-amd64 sing-box archive found")
+          PY
+
+          curl -fsSL "$(cat /tmp/sing-box-url)" -o /tmp/sing-box.tar.gz
+          mkdir -p /tmp/sing-box
+          tar -xzf /tmp/sing-box.tar.gz -C /tmp/sing-box --strip-components=1
+          echo "/tmp/sing-box" >> "$GITHUB_PATH"
+          /tmp/sing-box/sing-box version
+
+      - name: Generate rule sets
+        run: python scripts/generate.py
+
+      - name: Verify generated outputs
+        run: |
+          test -s dist/anthropic-singbox.json
+          test -s dist/anthropic-singbox.srs
+          grep -q "modelcontextprotocol.io" dist/anthropic-singbox.json
+          grep -q "challenges.cloudflare.com" dist/anthropic-singbox.json
+          python - <<'PY'
+          from pathlib import Path
+
+          source = Path("dist/anthropic-singbox.json")
+          output = Path("/tmp/anthropic-singbox-source.json")
+          output.write_text(
+              "\n".join(
+                  line for line in source.read_text().splitlines()
+                  if not line.startswith("//")
+              ) + "\n"
+          )
+          PY
+          sing-box rule-set compile --output /tmp/anthropic-singbox.srs /tmp/anthropic-singbox-source.json
+          cmp -s /tmp/anthropic-singbox.srs dist/anthropic-singbox.srs
+
+      - name: Commit and push changes
+        run: |
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "No changes to commit."
+            exit 0
+          fi
+
+          git add README.md domains.yaml supplemental-domains.yaml scripts/generate.py anthropic.list dist .github/workflows/sync-and-build.yml
+          git commit -m "Sync upstream and build rule sets"
+          git push origin HEAD:main

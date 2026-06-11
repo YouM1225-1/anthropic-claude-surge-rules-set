@@ -1,0 +1,18 @@
+# ============================================================
+# Anthropic / Claude — Local Supplemental Rules
+# These rules are applied after upstream domains.yaml.
+# ============================================================
+# Last updated: 2026-06-11
+
+groups:
+
+  # ------------------------------------------------------------------
+  # 1. Login & Challenge Flows
+  # ------------------------------------------------------------------
+  - name: Cloudflare Challenge
+    entries:
+      - domain: challenges.cloudflare.com
+        type: DOMAIN
+        reason: Cloudflare Turnstile challenge endpoint used during Claude login and bot checks
+        source: Claude web authentication flow network monitoring
+        added: 2026-06-11
